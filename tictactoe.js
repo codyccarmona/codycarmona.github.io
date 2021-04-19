@@ -1,27 +1,27 @@
 /*************************************************************************/
 /*                          DOCUMENT ELEMENTS                            */
 /*************************************************************************/
-const Document = (() =>{
+const Document = (() => {
     const _idLiterals = {
         TABLEFORGAME: 'tableBoard',
         STARTGAMEBUTTON: 'btnStartGame',
     };
-    
 
-    const getTDInTable = (i, j) => {
-        return document.getElementById(i + ':' + j);
+
+    const getTDInTable = (i) => {
+        return document.getElementById(i);
     }
     const getAllTDInTable = () => {
         return document.getElementsByName
     }
-    const getGameTable = () =>{
+    const getGameTable = () => {
         return document.getElementById(_idLiterals.TABLEFORGAME);
     }
-    const getStartButton = () =>{
+    const getStartButton = () => {
         return document.getElementsByTagName('TD');
     };
 
-    return{
+    return {
         getGameTable,
         getAllTDInTable,
         getStartButton,
@@ -31,158 +31,173 @@ const Document = (() =>{
 /*************************************************************************/
 /*                               GAME BOARD                              */
 /*************************************************************************/
-const GameBoard = (() =>{
+const Board = (() => {
     //Private functions/variables
-    let _board = null;
+    let _layout = null;
+    let _prop = null;
     //Create the board
-    const _createBoard = (dimension = 3) =>{
-        _board = new Array(dimension).fill(null);
-        _board.prop = {
-            vertStep: dimension,
-            horzStep: 1,
-            leftToRightStep: dimension + 1,
-            rightToLeftStep: dimension - 1,
-            isEmpty: false,
+    const _createBoard = (dimension = 3) => {
+        _layout = new Array(dimension * dimension).fill(null);
+        _prop = {
+            rows: dimension,
+            linesOnBoard: dimension - 1,
+            lToRDiagStep: dimension + 1,
+            rToLDiagStep: dimension - 1,
+            topLeftInd: (0 * (dimension - 1)),
+            topRightInd: (1 * (dimension - 1)),
+            bottomLeftInd: (3 * (dimension - 1)),
+            bottomRightInd: (4 * (dimension - 1)),
             isOnPage: false,
-            topLeftCorner: 0,
-            topRightCorner: 1 * (dimension - 1),
-            bottomLeftCorner: 2 * (dimension - 1),
-            bottomRightCorner: 3 * (dimension - 1),
+            lastIndInCol: (i) => {
+                return (i + (rows * (dimension - 1)));
+            },
+            lastIndInRow: (i) => {
+                return (i + row);
+            },
+        }
     };
 
-    const checkDiagnolWin = async () =>{
-        let currPlayerId = null;       
-        if((_board[0] && _board[_prop.bottomRightCorner])&& 
-            _board[0] == _board[_prop.bottomRightCorner]){
-                currPlayerId = _board[0];
-                for(let i = _prop.leftToRightStep; i < _board.length; i + _prop.leftToRightStep){
-                    if(_board[i] != currPlayerId){
-                        currPlayerId = null;
-                        break;
-                    }
 
-                }
-            }
-        else if((_board[_prop.topRightCorner] && _board[_prop.bottomLeftCorner])&& 
-                (_board[0] == _board[_prop.bottomRightCorner])){
-                    currPlayerId = _board[_prop.topRightCorner];
-                    for(let i = (_prop.topRightCorner + _prop.rightToLeftStep); i < _board.length; i + _prop.rightToLeftStep){
-                        if(_board[i] != currPlayerId){
-                            currPlayerId = null;
-                            break;
-                        }
-                    }
-                }
-        if(currPlayerId) Promise.resolve(currPlayerId);
-        else Promise.reject(null);
-
-    };
- 
-    const _checkVertical = async () => {
+    const _checkDiagnolWin = () => {
         let currPlayerId = null;
-    };
-    /*
-    Top left corner always index 0
-    Top right corner always 0 + size of each row in tic tac toe box
-    Bottom left is = (top right) 
-    */
-    const _checkHorizontal = async () =>{
-        let currPlayerId = null;
-        for(let i = 0; i < _boardProperties.length; i++){
-            if(!_boardProperties[i][0]){
-                continue;
-            }
-            else{
-                currPlayerId = _boardProperties[i][0];
-                for(let j = 1; j < _boardProperties.length; j++){
-                    if(!_boardProperties[i][j] || (currPlayerId && currPlayerId != _boardProperties[i][j])){
-                        currPlayerId = null;
-                        break;
-                    }
+        if ((_layout[0] && _layout[_prop.bottomRightInd]) &&
+            (_layout[0] == _layout[_prop.bottomRightInd])) {
+            let currPlayerId = _layout[_prop.topLeftInd];
+            for (let i = (_prop.topLeftInd + lToRDiagStep); i <= _prop.bottomRightInd; i + lToRDiagStep) {
+                if (_layout[i] != currPlayerId) {
+                    currPlayerId = null;
+                    break;
                 }
-            }
-            if(currPlayerId){
-                Promise.resolve(currPlayerId);
             }
         }
-        Promise.reject(0);
-    };
-    //Is my board already made
-    const _isEmpty = () =>{
-        return _boardProperties.isEmpty;
+        if ((_layout[_prop.topRightInd] && _layout[_prop.bottomLeftInd]) &&
+            (_layout[_prop.topRightInd] == _layout[_prop.bottomRightInd])) {
+            currPlayerId = _layout[_prop.topRightInd];
+            for (let i = (_prop.topRightInd + _prop.rToLDiagStep); i <= _prop.bottomLeftInd; i + _prop.rToLDiagStep) {
+                if (_layout[i] != currPlayerId) {
+                    currPlayerId = null;
+                    break;
+                }
+            }
+        }
+        if(currPlayerId){
+            resolve(currPlayerId);
+         }
+         return;
     };
 
-    //Has board been added to the table
-    const _isBoardOnDoc = () =>{
-        return _boardProperties.isOnPage;
+    const _checkVertical = () => {
+        const checkVert = function(resolve, reject){
+        let currPlayerId = null;
+        for (let i = 0; i < _prop.topRightInd; i++) {
+            if ((_layout[i] && _layout[(i + _prop.linesOnBoard)]) &&
+                (_layout[i] == _layout[(i + _prop.linesOnBoard)])) {
+                currPlayerId = _layout[i];
+                for (let j = (i + _prop.rows); j < (i + (_prop.rows * _prop.linesOnBoard)); j + _prop.rows) {
+                    if (_layout[j] != currPlayerId) {
+                        currPlayerId = null;
+                        break;
+                    }
+                }
+            }
+        }
+        if(currPlayerId){
+           resolve(currPlayerId);
+        }
+        return;
+    }
     };
 
+    const _checkHorizontal = () => {
+        let currPlayerId = null;
+        for (let i = 0; i < _prop.lastIndInRow; i++) {
+            if (_layout[i] && _layout[_prop.lastIndInCol] &&
+                _layout[i] == _layout[_prop.lastIndInCol]) {
+                currPlayerId = _layout[i];
+                for (let j = (i + _prop.rows); j < _prop.lastIndInCol; j + _prop.rows) {
+                    if (_layout[j] != currPlayerId) {
+                        currPlayerId = null;
+                        return;
+                    }
+                }
+            }
+        }
+        if(currPlayerId){
+            resolve(currPlayerId);
+         }
 
+         return;
+    };
 
     //Add board to page
-    const _addBoardToPage = () =>{
-        if(_isEmpty()){
-            return false;
+    const _addBoardToPage = () => {
+        if (_prop && _prop.isOnPage) {
+            _removeFromDom();
         }
-        for(let i = 0; i < Math.pow(_boardProperties.boardSize, _boardProperties.boardSize); i++){
+        let index = 0;
+        for (let i = 0; i < _prop.rows; i++) {
             const newRow = Document.getGameTable().insertRow();
-            for(let j = 0; j < _boardProperties.boardSize; j++){
+            for (let j = 0; j < _prop.rows; j++) {
                 const newTD = newRow.insertCell();
-                newTD.id = i + ':' + j;
-                newTD.appendChild(document.createTextNode(null));
+                newTD.id = index;
+                newTD.appendChild(document.createTextNode(''));
+                index++;
             }
         }
+        _prop.isOnPage = true;
     };
     //Remove board from table
-    const _removeFromDom = () =>{
-        let table = Document.getGameTable();
-        while(table.rows.length >= 0){
-            table.deleteRow(table.rows.length - 1);
-        }
-    };
-    //Reset the board container
-    const _clearBoardArr = () =>{
-        if(_isEmpty()) return;
-        _boardProperties.length = 0;
-    };
-    const _addEventListenersToBoard = () =>{
-        Document.getGameTable().onclick = (e) =>{
-            if(e.target.tagName != 'TD') return;
-            markMove(e.target);
+    const _removeFromDom = () => {
+        if (_prop.isOnPage) {
+            let table = Document.getGameTable();
+            while (table.rows.length >= 0) {
+                table.deleteRow(table.rows.length - 1);
+            }
+            _prop.isOnPage = false;
         }
     };
 
+    const _noWinner = () =>{
+        alert('no winner')
+    }
 
-    //check for wins or ties
-
-    //Prep for new game
-
-    //Return a current img of the board as is
-
-    //Marks move in board arr
-    const markMove = (tdClicked) =>{
-        tdClicked.firstChild.nodeValue = '*';
-        let tdClickedInd = tdClicked.id.split(':');
-        _boardProperties[tdClickedInd[0]][tdClickedInd[1]] = '*';
+    const _addEventListenersToBoard = () => {
+        Document.getGameTable().onclick = (e) => {
+            if (e.target.tagName == 'TD' && e.target.innerText == '') {
+                _layout[e.target.id] = '*';
+                e.target.innerText = '*';
+                return true;
+            }
+            else {
+                return false;
+            }
+        };
+    };
+    const _noWinnerx = () =>{
+        return;
+    }
+    const checkForWinner = async () => {
+        let horz = new Promise(_checkDiagnolWin(), _noWinnerx);
+        let vert = new Promise(_checkVertical(), _noWinnerx);
+        let diag = new Promise(_checkDiagnolWin(), _noWinnerx); 
+        await Promise.any([horz, vert, diag]).then(val=>{
+            alert('winner');
+        }).catch(e=>{
+            'No winner';
+            return;
+        });
     };
     //Makes a blank board and adds it to the page
-    const initialize = (dimension = 3) =>{
-        if(!_isEmpty()){
-            _removeFromDom();
-            _clearBoardArr();
-            cornerSpots.reset();
-        }
+    const newGame = (dimension = 3) => {
         _createBoard(dimension);
         _addBoardToPage();
         _addEventListenersToBoard();
-        cornerSpots.setYCoords(_boardProperties.length);
     };
     //Return accessible functions
-    return{
-        initialize,
-        markMove,
-        checkDiagnol,
-    };
+    return {
+        newGame,
+        checkForWinner,
+    }
 })();
 
 
@@ -190,52 +205,48 @@ const GameBoard = (() =>{
 /*************************************************************************/
 /*                               GAME CONTROLLER                         */
 /*************************************************************************/
-const Game = (() =>{
+const Game = (() => {
 
 })();
 //Use map to track num of moves per player
 
-//Test GameBoard
+//Test Game
 
 
 /*************************************************************************/
 /*                               PLAYER                                  */
 /*************************************************************************/
-class Player{
-    constructor(symbol){
+class Player {
+    constructor(symbol) {
         this._symbol = symbol;
         this._wins = 0;
         this._losses = 0;
     }
 
-    get symbol(){
+    get symbol() {
         return this.symbol;
     }
-    set symbol(symbol){
-        this._symbol - symbol;
+    set symbol(symbol) {
+        this._symbol = symbol;
     }
 
-    get  wins(){
+    get wins() {
         return this._wins;
     }
-    addWin(){
+    addWin() {
         this._wins++;
     }
-    get  losses(){
+    get losses() {
         return this._losses;
     }
-    addLoss(){
+    addLoss() {
         this._losses++;
     }
 };
 
 
-document.addEventListener('DOMContentLoaded',()=>{
-    GameBoard.initialize();
-    document.getElementById('testChecks').onclick = ()=>{
-        GameBoard.checkVertical().then(()=>{
-            alert('win');
-    }).catch(()=>{
-        alert('no win');
-    })}
+document.addEventListener('DOMContentLoaded', () => {
+    Board.newGame();
+    document.getElementById('testChecks').onclick = Board.checkForWinner();
+
 });
