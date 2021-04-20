@@ -198,6 +198,9 @@ const Board = (() => {
             return;
         });
     };
+    const getBoardImg = () =>{
+        return _layout.slice();
+    }
     //Makes a blank board and adds it to the page
     const newBoard = (dimension = 3) => {
         _createBoard(dimension);
@@ -208,6 +211,7 @@ const Board = (() => {
     return {
         newBoard,
         checkForWinner,
+        getBoardImg,
     }
 })();
 
@@ -254,6 +258,7 @@ class Player {
         this._losses++;
     }
 };
+
 
 
 document.addEventListener('DOMContentLoaded', () => {
