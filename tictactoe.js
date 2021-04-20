@@ -51,77 +51,98 @@ const Board = (() => {
         }
     };
 
-    const _getLastIndexInRow = ((row)=>{
+    const _getLastIndexInRow = ((row) => {
         return (row + _prop.linesOnBoard);
     });
-    const _getLastIndexInCol = ((col)=>{
+    const _getLastIndexInCol = ((col) => {
         return (col + ((_prop.rows) * _prop.linesOnBoard));
     });
-
     const _checkDiagnol = () => {
         return new Promise((res, rej) => {
-            let currPlayerId = null;
+            let winner = { id: null, path: [] };
             if ((_layout[0] && _layout[_prop.bottomRightInd]) &&
                 (_layout[0] === _layout[_prop.bottomRightInd])) {
-                currPlayerId = _layout[0];
+                winner.id = _layout[0];
+                winner.path.push(0);
                 for (let i = (0 + _prop.lToRDiagStep); i < _prop.bottomRightInd; i += _prop.lToRDiagStep) {
-                    if (_layout[i] != currPlayerId) {
-                        currPlayerId = null;
+                    if (_layout[i] != winner.id) {
+                        winner.id = null;
+                        winner.path.length = 0;
                         break;
                     }
+                    winner.path.push(i);
+                }
+                if(winner.id){
+                    winner.path.push(bottomRightInd);
                 }
             }
             //Top right to bottom left
-            if ((_layout[_prop.topRightInd] && _layout[_prop.bottomLeftInd]) &&
-                (_layout[_prop.topRightInd] === _layout[_prop.bottomRightInd])) {
-                currPlayerId = _layout[_prop.topRightInd];
-                for (let i = (_prop.topRightInd + _prop.rToLDiagStep); i < _prop.bottomLeftInd; i += _prop.rToLDiagStep) {
-                    if (_layout[i] != currPlayerId) {
-                        currPlayerId = null;
-                        break;
+            if (!winner.id) {
+                if ((_layout[_prop.topRightInd] && _layout[_prop.bottomLeftInd]) &&
+                    (_layout[_prop.topRightInd] === _layout[_prop.bottomRightInd])) {
+                    winner.id = _layout[_prop.topRightInd];
+                    winner.path.push(_prop.topRightInd);
+                    for (let i = (_prop.topRightInd + _prop.rToLDiagStep); i < _prop.bottomLeftInd; i += _prop.rToLDiagStep) {
+                        if (_layout[i] != winner.id) {
+                            winner.id = null;
+                            winner.path.length = 0;
+                            break;
+                        }
+                        winner.path.push(i);
                     }
                 }
             }
-           return currPlayerId ? res(currPlayerId) : rej();
+            winner.id ? res({id: winner.id, path: winner.path}) : rej();
         });
     };
 
     const _checkVertical = () => {
         return new Promise((res, rej) => {
-            let currPlayerId = null;
+            let winner = { id: null, path: [] };
             for (let i = 0; i <= _prop.topRightInd; i++) {
                 if ((_layout[i] && _layout[_getLastIndexInCol(i)]) &&
                     (_layout[i] === _layout[_getLastIndexInCol(i)])) {
-                    currPlayerId = _layout[i];
+                    winner.id = _layout[i];
+                    winner.path.push(i);
                     for (let j = (i + _prop.rows); j < (_getLastIndexInCol(i)); j += _prop.rows) {
-                        if (_layout[j] != currPlayerId) {
-                            currPlayerId = null;
+                        if (_layout[j] != winner.id) {
+                            winner.id = null;
+                            winner.path.length = 0;
                             break;
                         }
+                        winner.path.push(j);
+                    }
+                    if(winner.id){
+                        winner.path.push(_getLastIndexInCol);
                     }
                 }
             }
-           return currPlayerId ? res(currPlayerId) : rej();
+            winner.id ? res({id: winner.id, path: winner.path}) : rej();
         });
     };
 
-
     const _checkHorizontal = () => {
-        return new Promise((res, rej)=>{
-        let currPlayerId = null;
-        for (let i = 0; i < _prop.bottomLeftInd; i += _prop.rows) {
-            if (_layout[i] && _layout[_getLastIndexInRow(i)] &&
-                _layout[i] == _layout[_getLastIndexInRow(i)]) {
-                currPlayerId = _layout[i];
-                for (let j = (i + 1); j < _getLastIndexInRow(i); j ++) {
-                    if (_layout[j] != currPlayerId) {
-                        currPlayerId = null;
-                        break;
+        return new Promise((res, rej) => {
+            let winner = { id: null, path: [] };
+            for (let i = 0; i < _prop.bottomLeftInd; i += _prop.rows) {
+                if (_layout[i] && _layout[_getLastIndexInRow(i)] &&
+                    _layout[i] == _layout[_getLastIndexInRow(i)]) {
+                    winner.id = _layout[i];
+                    winner.path.push(i);
+                    for (let j = (i + 1); j < _getLastIndexInRow(i); j++) {
+                        if (_layout[j] != winner.id) {
+                            winner.id = null;
+                            winner.path.length = 0;
+                            break;
+                        }
+                        winner.path.push(j);
+                    }
+                    if(winner.id){
+                        winner.path.push(_getLastIndexInRow(i));
                     }
                 }
             }
-        }
-        return currPlayerId ? res(currPlayerId) : rej();
+            winner.id ? res({id: winner.id, path: winner.path}) : rej();
         });
     };
 
@@ -165,24 +186,27 @@ const Board = (() => {
             }
         };
     };
-
-    const checkForWinner = async () => {
-        await Promise.any([_checkDiagnol(),_checkHorizontal(),_checkVertical()]).then(val =>{
-            alert(val + ' has won!');
-        }).catch(e => {
-            alert('No winner!');
+    const _markWin = (path)=>{
+        path.forEach(index => {
+            Document.getTDInTable(index).innerText = '$';
         });
-        return;
+    };
+    const checkForWinner = async () => {
+        await Promise.any([_checkDiagnol(), _checkHorizontal(), _checkVertical()]).then(winner => {
+            _markWin(winner.path);
+        }).catch(e => {
+            return;
+        });
     };
     //Makes a blank board and adds it to the page
-    const newGame = (dimension = 3) => {
+    const newBoard = (dimension = 3) => {
         _createBoard(dimension);
         _addBoardToPage();
         _addEventListenersToBoard();
     };
     //Return accessible functions
     return {
-        newGame,
+        newBoard,
         checkForWinner,
     }
 })();
@@ -233,7 +257,7 @@ class Player {
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    Board.newGame();
+    Board.newBoard();
     document.getElementById('testChecks').onclick = Board.checkForWinner;
 
 });
