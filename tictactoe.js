@@ -48,52 +48,72 @@ const Board = (() => {
             bottomLeftInd: (3 * (dimension - 1)),
             bottomRightInd: (4 * (dimension - 1)),
             isOnPage: false,
-            lastIndInCol: (i) => {
-                return (i + (rows * (dimension - 1)));
-            },
-            lastIndInRow: (i) => {
-                return (i + row);
-            },
         }
     };
 
+    const _getLastIndexInRow = ((row)=>{
+        return (row + _prop.linesOnBoard);
+    });
+    const _getLastIndexInCol = ((col)=>{
+        return (col + ((_prop.rows) * _prop.linesOnBoard));
+    });
 
-    const _checkDiagnolWin = () => {
-        let currPlayerId = null;
-        if ((_layout[0] && _layout[_prop.bottomRightInd]) &&
-            (_layout[0] == _layout[_prop.bottomRightInd])) {
-            let currPlayerId = _layout[_prop.topLeftInd];
-            for (let i = (_prop.topLeftInd + lToRDiagStep); i <= _prop.bottomRightInd; i + lToRDiagStep) {
-                if (_layout[i] != currPlayerId) {
-                    currPlayerId = null;
-                    break;
+    const _checkDiagnol = () => {
+        return new Promise((res, rej) => {
+            let currPlayerId = null;
+            if ((_layout[0] && _layout[_prop.bottomRightInd]) &&
+                (_layout[0] === _layout[_prop.bottomRightInd])) {
+                currPlayerId = _layout[0];
+                for (let i = (0 + _prop.lToRDiagStep); i < _prop.bottomRightInd; i += _prop.lToRDiagStep) {
+                    if (_layout[i] != currPlayerId) {
+                        currPlayerId = null;
+                        break;
+                    }
                 }
             }
-        }
-        if ((_layout[_prop.topRightInd] && _layout[_prop.bottomLeftInd]) &&
-            (_layout[_prop.topRightInd] == _layout[_prop.bottomRightInd])) {
-            currPlayerId = _layout[_prop.topRightInd];
-            for (let i = (_prop.topRightInd + _prop.rToLDiagStep); i <= _prop.bottomLeftInd; i + _prop.rToLDiagStep) {
-                if (_layout[i] != currPlayerId) {
-                    currPlayerId = null;
-                    break;
+            //Top right to bottom left
+            if ((_layout[_prop.topRightInd] && _layout[_prop.bottomLeftInd]) &&
+                (_layout[_prop.topRightInd] === _layout[_prop.bottomRightInd])) {
+                currPlayerId = _layout[_prop.topRightInd];
+                for (let i = (_prop.topRightInd + _prop.rToLDiagStep); i < _prop.bottomLeftInd; i += _prop.rToLDiagStep) {
+                    if (_layout[i] != currPlayerId) {
+                        currPlayerId = null;
+                        break;
+                    }
                 }
             }
-        }
-        if(currPlayerId){
-            resolve(currPlayerId);
-         }
-         return;
+           return currPlayerId ? res(currPlayerId) : rej();
+        });
     };
 
     const _checkVertical = () => {
-        const checkVert = function(resolve, reject){
+        return new Promise((res, rej) => {
+            let currPlayerId = null;
+            for (let i = 0; i <= _prop.topRightInd; i++) {
+                if ((_layout[i] && _layout[_getLastIndexInCol(i)]) &&
+                    (_layout[i] === _layout[_getLastIndexInCol(i)])) {
+                    currPlayerId = _layout[i];
+                    for (let j = (i + _prop.rows); j < (_getLastIndexInCol(i)); j += _prop.rows) {
+                        if (_layout[j] != currPlayerId) {
+                            currPlayerId = null;
+                            break;
+                        }
+                    }
+                }
+            }
+           return currPlayerId ? res(currPlayerId) : rej();
+        });
+    };
+
+
+    const _checkHorizontal = () => {
+        return new Promise((res, rej)=>{
         let currPlayerId = null;
-        for (let i = 0; i < _prop.topRightInd; i++) {
-            if ((_layout[i] && _layout[(i + _prop.linesOnBoard)]) &&
-                (_layout[i] == _layout[(i + _prop.linesOnBoard)])) {
+        for (let i = 0; i < _prop.bottomLeftInd; i += _prop.rows) {
+            if (_layout[i] && _layout[_getLastIndexInRow(i)] &&
+                _layout[i] == _layout[_getLastIndexInRow(i)]) {
                 currPlayerId = _layout[i];
-                for (let j = (i + _prop.rows); j < (i + (_prop.rows * _prop.linesOnBoard)); j + _prop.rows) {
+                for (let j = (i + 1); j < _getLastIndexInRow(i); j ++) {
                     if (_layout[j] != currPlayerId) {
                         currPlayerId = null;
                         break;
@@ -101,32 +121,8 @@ const Board = (() => {
                 }
             }
         }
-        if(currPlayerId){
-           resolve(currPlayerId);
-        }
-        return;
-    }
-    };
-
-    const _checkHorizontal = () => {
-        let currPlayerId = null;
-        for (let i = 0; i < _prop.lastIndInRow; i++) {
-            if (_layout[i] && _layout[_prop.lastIndInCol] &&
-                _layout[i] == _layout[_prop.lastIndInCol]) {
-                currPlayerId = _layout[i];
-                for (let j = (i + _prop.rows); j < _prop.lastIndInCol; j + _prop.rows) {
-                    if (_layout[j] != currPlayerId) {
-                        currPlayerId = null;
-                        return;
-                    }
-                }
-            }
-        }
-        if(currPlayerId){
-            resolve(currPlayerId);
-         }
-
-         return;
+        return currPlayerId ? res(currPlayerId) : rej();
+        });
     };
 
     //Add board to page
@@ -157,10 +153,6 @@ const Board = (() => {
         }
     };
 
-    const _noWinner = () =>{
-        alert('no winner')
-    }
-
     const _addEventListenersToBoard = () => {
         Document.getGameTable().onclick = (e) => {
             if (e.target.tagName == 'TD' && e.target.innerText == '') {
@@ -173,19 +165,14 @@ const Board = (() => {
             }
         };
     };
-    const _noWinnerx = () =>{
-        return;
-    }
+
     const checkForWinner = async () => {
-        let horz = new Promise(_checkDiagnolWin(), _noWinnerx);
-        let vert = new Promise(_checkVertical(), _noWinnerx);
-        let diag = new Promise(_checkDiagnolWin(), _noWinnerx); 
-        await Promise.any([horz, vert, diag]).then(val=>{
-            alert('winner');
-        }).catch(e=>{
-            'No winner';
-            return;
+        await Promise.any([_checkDiagnol(),_checkHorizontal(),_checkVertical()]).then(val =>{
+            alert(val + ' has won!');
+        }).catch(e => {
+            alert('No winner!');
         });
+        return;
     };
     //Makes a blank board and adds it to the page
     const newGame = (dimension = 3) => {
@@ -247,6 +234,6 @@ class Player {
 
 document.addEventListener('DOMContentLoaded', () => {
     Board.newGame();
-    document.getElementById('testChecks').onclick = Board.checkForWinner();
+    document.getElementById('testChecks').onclick = Board.checkForWinner;
 
 });
