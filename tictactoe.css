@@ -11,11 +11,34 @@ td{
     border-radius: 5px;
     text-align: center;
 }
-td:hover{
+.active{
     background-color: #fff891;
     cursor: pointer;
+    
 }
-.marked{
-    background-color: #fff891;
+#turnLabel{
+    margin-left: 47%;
+    font-size: 2em;
+    font-weight: bold;
+    color: red;
+    text-align: center;
 }
-
+.startGame{
+    margin-left: 50%;
+    margin-right: auto;
+    margin-top: 20%;
+    border-radius: 2px;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    transition-duration: .2s;
+}
+.startGame:hover{
+    background-color: #4CAF50; /* Green */
+    color: white;
+}
+.startGame:focus{
+    outline: none;
+}
