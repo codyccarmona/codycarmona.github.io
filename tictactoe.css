@@ -3,7 +3,7 @@ table{
     table-layout: fixed;
     margin-right: auto;
     margin-left: auto;
-    margin-top: 25%;
+    margin-top: 10%;
 }
 td{
     border: 2px solid #000000;
@@ -15,3 +15,7 @@ td:hover{
     background-color: #fff891;
     cursor: pointer;
 }
+.marked{
+    background-color: #fff891;
+}
+

@@ -5,6 +5,7 @@ const Document = (() => {
     const _idLiterals = {
         TABLEFORGAME: 'tableBoard',
         STARTGAMEBUTTON: 'btnStartGame',
+        NEXTGAMEBUTTON: 'btnNextGame',
     };
 
 
@@ -12,20 +13,37 @@ const Document = (() => {
         return document.getElementById(i);
     }
     const getAllTDInTable = () => {
-        return document.getElementsByName
+        return document.getElementsByName('TD');
     }
     const getGameTable = () => {
         return document.getElementById(_idLiterals.TABLEFORGAME);
     }
     const getStartButton = () => {
-        return document.getElementsByTagName('TD');
+        return document.getElementById(_idLiterals.STARTGAMEBUTTON);
     };
-
+    const getNextButton = () =>{
+        return document.getElementById(_idLiterals.NEXTGAMEBUTTON);
+    }
+    const markMoveOnTable = (id) =>{
+        return new Promise((res, rej) =>{
+            let cell = getTDInTable(id);
+            if(cell){
+                cell.innerText = GameController.getTurn();
+                cell.style.backgroundColor = '#fff891';
+                res(true);
+            }
+            else{
+                rej('DOM error');
+            }
+        });
+    };
     return {
         getGameTable,
         getAllTDInTable,
         getStartButton,
         getTDInTable,
+        getNextButton,
+        markMoveOnTable,
     }
 })();
 /*************************************************************************/
@@ -47,7 +65,6 @@ const Board = (() => {
             topRightInd: (1 * (dimension - 1)),
             bottomLeftInd: (3 * (dimension - 1)),
             bottomRightInd: (4 * (dimension - 1)),
-            isOnPage: false,
         }
     };
 
@@ -73,7 +90,7 @@ const Board = (() => {
                     winner.path.push(i);
                 }
                 if(winner.id){
-                    winner.path.push(bottomRightInd);
+                    winner.path.push(_prop.bottomRightInd);
                 }
             }
             //Top right to bottom left
@@ -92,7 +109,7 @@ const Board = (() => {
                     }
                 }
             }
-            winner.id ? res({id: winner.id, path: winner.path}) : rej();
+            winner.id ? res({id: winner.id, path: winner.path}) : rej(0);
         });
     };
 
@@ -113,11 +130,11 @@ const Board = (() => {
                         winner.path.push(j);
                     }
                     if(winner.id){
-                        winner.path.push(_getLastIndexInCol);
+                        winner.path.push(_getLastIndexInCol(i));
                     }
                 }
             }
-            winner.id ? res({id: winner.id, path: winner.path}) : rej();
+            winner.id ? res({id: winner.id, path: winner.path}) : rej(0);
         });
     };
 
@@ -142,15 +159,12 @@ const Board = (() => {
                     }
                 }
             }
-            winner.id ? res({id: winner.id, path: winner.path}) : rej();
+            winner.id ? res({id: winner.id, path: winner.path}) : rej(0);
         });
     };
 
     //Add board to page
     const _addBoardToPage = () => {
-        if (_prop && _prop.isOnPage) {
-            _removeFromDom();
-        }
         let index = 0;
         for (let i = 0; i < _prop.rows; i++) {
             const newRow = Document.getGameTable().insertRow();
@@ -161,57 +175,60 @@ const Board = (() => {
                 index++;
             }
         }
-        _prop.isOnPage = true;
     };
     //Remove board from table
     const _removeFromDom = () => {
-        if (_prop.isOnPage) {
-            let table = Document.getGameTable();
-            while (table.rows.length >= 0) {
-                table.deleteRow(table.rows.length - 1);
-            }
-            _prop.isOnPage = false;
+        let table = Document.getGameTable();
+        while (table.rows.length >= 0) {
+            table.deleteRow(table.rows.length - 1);
         }
     };
 
-    const _addEventListenersToBoard = () => {
-        Document.getGameTable().onclick = (e) => {
-            if (e.target.tagName == 'TD' && e.target.innerText == '') {
-                _layout[e.target.id] = '*';
-                e.target.innerText = '*';
-                return true;
-            }
-            else {
-                return false;
-            }
-        };
-    };
+    /*
     const _markWin = (path)=>{
         path.forEach(index => {
-            Document.getTDInTable(index).innerText = '$';
+            Document.getTDInTable(index).classList.add('marked');
         });
+        return;
     };
+    */
     const checkForWinner = async () => {
+        let resp = null;
         await Promise.any([_checkDiagnol(), _checkHorizontal(), _checkVertical()]).then(winner => {
-            _markWin(winner.path);
+            //_markWin(winner.path);
+            resp = winner;
         }).catch(e => {
-            return;
+            resp = e;
         });
+        alert(resp);
     };
-    const getBoardImg = () =>{
-        return _layout.slice();
-    }
+
     //Makes a blank board and adds it to the page
-    const newBoard = (dimension = 3) => {
+    const initialize = (dimension = 3) => {
+        if(_layout){
+            _removeFromDom();
+        }
         _createBoard(dimension);
         _addBoardToPage();
-        _addEventListenersToBoard();
+    };
+    const getBoardImg = ()=>{
+        return _layout.slice(0);
+    };
+    const markMoveOnBoard = (i) =>{
+        return new Promise((res, rej) =>{
+            if(_layout[i]){
+                rej('Board error');
+            }
+            _layout[i] = GameController.getTurn();
+            res(true);
+        });
     };
     //Return accessible functions
     return {
-        newBoard,
+        initialize,
         checkForWinner,
         getBoardImg,
+        markMoveOnBoard,
     }
 })();
 
@@ -220,9 +237,81 @@ const Board = (() => {
 /*************************************************************************/
 /*                               GAME CONTROLLER                         */
 /*************************************************************************/
-const Game = (() => {
+const GameController = (() => {
+    let _flags = null;
+    let _player1 = null;
+    let _player2 = null;
 
+    const _setFlags = (hasComputer = false)  =>{
+        _flags = {
+            isCompPlaying: hasComputer,
+            isWhoseTurn: null,
+        }
+    };
+    const _changeTurn = () =>{
+        _flags.isWhoseTurn === _player1.symbol ? _flags.isWhoseTurn = _player2.symbol : _flags.isWhoseTurn = _player1.symbol;
+    }
+    const _isSpotOpen = (cell) =>{
+        if(cell.innerText != ''){
+            return false;
+        }
+        else{
+            return true;
+        }
+    }
+
+    const _playMove = async (tableEvent) => {
+        let cell = tableEvent.target;
+        if (_isSpotOpen(cell) && !_flags.isWinner) {
+            await Document.markMoveOnTable(cell.id).then(Board.markMoveOnBoard(cell.id));
+            if (await Board.checkForWinner()) {
+                alert('Player ' + _flags.isWhoseTurn + ' won!');
+                _flags.isWinner = true;
+                return false;
+            };
+        }
+    };
+
+    const _addEventListenersToBoard = () => {
+        Document.getGameTable().onclick = (e) => {
+            return _playMove(e);
+        };
+    };
+    const _createPlayers = ()=>{
+        _flags.isCompPlaying ? _player1 = new Computer('X') : _player1 = new Player('X');       
+        _player2 = new Player('O');
+    };
+
+    const _determineFirstPlayer = () =>{
+        (Math.floor(Math.random() * 2) === 0) ? _flags.isWhoseTurn = _player1.symbol : _flags.isWhoseTurn = _player2.symbol;
+    };
+
+    const getTurn = () =>{
+        return _flags.isWhoseTurn;
+    }
+
+
+
+
+
+
+
+
+
+    const newGame = ((hasComputer = false) =>{
+        Board.initialize();
+        _setFlags();
+        _createPlayers();
+        _determineFirstPlayer();
+        _addEventListenersToBoard();
+    });
+
+    return{
+        newGame,
+        getTurn,
+    }
 })();
+
 //Use map to track num of moves per player
 
 //Test Game
@@ -239,7 +328,7 @@ class Player {
     }
 
     get symbol() {
-        return this.symbol;
+        return this._symbol;
     }
     set symbol(symbol) {
         this._symbol = symbol;
@@ -257,12 +346,34 @@ class Player {
     addLoss() {
         this._losses++;
     }
+    isMyTurn(){
+        return this._symbol === GameController.getTurn() ? true: false;
+    }
+};
+
+class Computer extends Player {
+    constructor(symbol){
+        super(symbol);
+        this._first = false;
+        this._board = null;
+    };
+
+    set first(bool){
+        this._first = bool;
+    };
+
+    get first(){
+        return this._first;
+    };
+
+    set board(boardImg){
+        this._board = boardImg;
+    }
+
 };
 
 
-
 document.addEventListener('DOMContentLoaded', () => {
-    Board.newBoard();
-    document.getElementById('testChecks').onclick = Board.checkForWinner;
-
+    //Document.getNextButton().onclick = GameController.nextGame;
+    Document.getStartButton().onclick = GameController.newGame;
 });
